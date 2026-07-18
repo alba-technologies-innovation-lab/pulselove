@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Profil PulseLove</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            color: #20202b;
+            background: linear-gradient(160deg, #ffdce5, #fff4ed, #e8e4ff);
+        }
+
+        .card {
+            width: 100%;
+            max-width: 430px;
+            padding: 32px 24px;
+            border-radius: 32px;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 18px 50px rgba(70, 40, 80, 0.16);
+        }
+
+        .logo { margin: 0 0 8px; color: #ff496b; font-size: 42px; font-weight: 800; }
+        .subtitle { margin: 0 0 24px; color: #74717c; }
+
+        .profile-photo {
+            display: none;
+            width: 154px;
+            height: 154px;
+            margin: 0 auto 18px;
+            border: 5px solid white;
+            border-radius: 50%;
+            object-fit: cover;
+            box-shadow: 0 10px 30px rgba(70, 40, 80, 0.18);
+        }
+
+        .profile-name { margin: 0 0 8px; font-size: 30px; font-weight: 800; }
+        .profile-meta { margin: 0 0 14px; color: #74717c; font-size: 16px; line-height: 1.4; }
+        .message { margin: 16px 0; font-size: 19px; line-height: 1.5; }
+
+        .status {
+            margin: 18px 0;
+            padding: 14px;
+            border-radius: 16px;
+            background: #fff1f5;
+            color: #8c3850;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .bio { display: none; margin: 14px 0 0; color: #34313f; font-size: 16px; line-height: 1.5; }
+        .interests { display: none; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 16px 0 0; }
+
+        .chip {
+            padding: 7px 11px;
+            border: 1px solid rgba(255, 73, 107, 0.34);
+            border-radius: 999px;
+            color: #8c3850;
+            background: #fff8fa;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .button {
+            display: block;
+            width: 100%;
+            margin-top: 14px;
+            padding: 16px 18px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .open { color: white; background: #ff4f70; }
+        .download { color: #ff4f70; border: 2px solid #ff4f70; background: white; }
+        .hidden { display: none; }
+    </style>
+</head>
+
+<body>
+    <main class="card">
+        <h1 class="logo">PulseLove</h1>
+        <p class="subtitle">Fais battre les rencontres</p>
+
+        <img id="profilePhoto" class="profile-photo" alt="Photo du profil PulseLove">
+
+        <h2 id="profileName" class="profile-name"></h2>
+        <p id="profileMeta" class="profile-meta"></p>
+
+        <p id="message" class="message">Chargement du profil…</p>
+
+        <div id="profileInfo" class="status">Connexion à PulseLove…</div>
+
+        <p id="profileBio" class="bio"></p>
+        <div id="profileInterests" class="interests"></div>
+
+        <a class="button open hidden" id="openApp">Ouvrir dans PulseLove</a>
+
+        <a class="button download" href="https://alba-technologies-innovation-lab.github.io/pulselove/telecharger/">
+            Télécharger PulseLove
+        </a>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9UUQTd9uuy9KTH-S1xXrixG3wQBKMOCg",
+            authDomain: "pulselove-5144f.firebaseapp.com",
+            databaseURL: "https://pulselove-5144f-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "pulselove-5144f",
+            storageBucket: "pulselove-5144f.firebasestorage.app",
+            messagingSenderId: "489013667954",
+            appId: "1:489013667954:web:dc627753a11e0420dcbaeb",
+            measurementId: "G-8BPKH9N117"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const publicProfileApiUrl = "https://europe-west1-pulselove-5144f.cloudfunctions.net/publicProfileData";
+
+        const params = new URLSearchParams(window.location.search);
+        const uid = params.get("uid");
+
+        const profilePhoto = document.getElementById("profilePhoto");
+        const profileName = document.getElementById("profileName");
+        const profileMeta = document.getElementById("profileMeta");
+        const profileInfo = document.getElementById("profileInfo");
+        const profileBio = document.getElementById("profileBio");
+        const profileInterests = document.getElementById("profileInterests");
+        const message = document.getElementById("message");
+        const openApp = document.getElementById("openApp");
+
+        console.log("UID reçu :", uid);
+        console.log("Collection utilisée : public_profiles");
+
+        function firstDefined(object, keys) {
+            for (const key of keys) {
+                const value = object?.[key];
+                if (value !== undefined && value !== null && String(value).trim() !== "") {
+                    return value;
+                }
+            }
+            return null;
+        }
+
+        function showError(mainText, detailsText) {
+            message.textContent = mainText;
+            profileInfo.textContent = detailsText || "";
+            profileName.textContent = "";
+            profileMeta.textContent = "";
+            profilePhoto.style.display = "none";
+            profileBio.style.display = "none";
+            profileInterests.style.display = "none";
+            openApp.classList.add("hidden");
+        }
+
+        function configureOpenButton(profileUid) {
+            openApp.href =
+                "intent://profile/" + encodeURIComponent(profileUid) +
+                "#Intent;" +
+                "scheme=pulselove;" +
+                "package=com.pulselove.app;" +
+                "S.browser_fallback_url=" +
+                encodeURIComponent("https://play.google.com/store/apps/details?id=com.pulselove.app") +
+                ";end";
+            openApp.classList.remove("hidden");
+        }
+
+        function displayProfile(profile, profileUid) {
+            const publicName = firstDefined(profile, ["displayName", "publicName", "firstName", "name", "username"]);
+            const photoUrl = firstDefined(profile, ["photoUrl", "profilePhotoUrl", "photoURL", "profileImageUrl", "imageUrl", "avatarUrl"]);
+            const metaParts = [];
+
+            if (Number.isFinite(Number(profile.age))) metaParts.push(Number(profile.age) + " ans");
+            if (profile.city) metaParts.push(String(profile.city));
+
+            profileName.textContent = publicName || "Profil PulseLove";
+            profileMeta.textContent = metaParts.join(" · ");
+            message.textContent = "Salut ! Je suis " + (publicName || "sur PulseLove") + " sur PulseLove 💕";
+            profileInfo.textContent = "Découvrez mon profil et discutez avec moi dans l’application.";
+
+            if (profile.bio) {
+                profileBio.textContent = String(profile.bio);
+                profileBio.style.display = "block";
+            }
+
+            if (Array.isArray(profile.interests) && profile.interests.length > 0) {
+                profileInterests.innerHTML = "";
+                profile.interests
+                    .filter((interest) => String(interest).trim() !== "")
+                    .slice(0, 5)
+                    .forEach((interest) => {
+                        const chip = document.createElement("span");
+                        chip.className = "chip";
+                        chip.textContent = String(interest);
+                        profileInterests.appendChild(chip);
+                    });
+                profileInterests.style.display = "flex";
+            }
+
+            if (photoUrl) {
+                profilePhoto.src = photoUrl;
+                profilePhoto.style.display = "block";
+                profilePhoto.onerror = () => { profilePhoto.style.display = "none"; };
+            }
+
+            configureOpenButton(profileUid);
+        }
+
+        async function loadProfileFromApi() {
+            console.log("Fallback profil public : HTTPS Function");
+            const response = await fetch(publicProfileApiUrl + "?uid=" + encodeURIComponent(uid), { cache: "no-store" });
+            console.log("Réponse API profil public :", response.status);
+
+            if (response.status === 404) {
+                showError("Profil introuvable.", "Aucun profil public correspondant n’a été trouvé.");
+                return true;
+            }
+
+            if (!response.ok) throw new Error("API profil public HTTP " + response.status);
+
+            const profile = await response.json();
+            console.log("Document trouvé :", true);
+            displayProfile(profile, uid);
+            return true;
+        }
+
+        async function loadProfile() {
+            if (!uid || uid.trim() === "") {
+                showError("Lien de profil incomplet.", "Aucun identifiant Firebase trouvé.");
+                return;
+            }
+
+            try {
+                const profileRef = doc(db, "public_profiles", uid);
+                const profileSnap = await getDoc(profileRef);
+                console.log("Document trouvé :", profileSnap.exists());
+
+                if (!profileSnap.exists()) {
+                    await loadProfileFromApi();
+                    return;
+                }
+
+                const profile = profileSnap.data();
+
+                if (profile.isDeleted === true || profile.isDisabled === true || profile.isVisible === false) {
+                    showError("Ce profil n’est plus disponible.", "Ce profil est privé, supprimé ou désactivé.");
+                    return;
+                }
+
+                displayProfile(profile, uid);
+            } catch (error) {
+                console.error("Erreur Firestore profil public :", error.code, error.message);
+                console.error("Code Firebase :", error.code);
+                console.error("Message Firebase :", error.message);
+
+                try {
+                    await loadProfileFromApi();
+                } catch (fallbackError) {
+                    console.error("Erreur API profil public :", fallbackError.message);
+                    showError("Impossible de charger ce profil pour le moment.", "Vérifiez les règles Firestore et l’identifiant utilisé.");
+                }
+            }
+        }
+
+        loadProfile();
+    </script>
+</body>
+</html>
