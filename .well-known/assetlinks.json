@@ -1,11 +1,15 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.pulselove.app",
-      "sha256_cert_fingerprints":
-        ["21:B9:1E:CA:EE:D7:0F:1B:FF:06:1E:7B:BE:A7:52:D3:F1:3B:BE:28:DC:1C:09:1B:79:C6:80:AB:49:ED:94:B1"]
+      "sha256_cert_fingerprints": [
+        "21:B9:1E:CA:EE:D7:0F:1B:FF:06:1E:7B:BE:A7:52:D3:F1:3B:BE:28:DC:1C:09:1B:79:C6:80:AB:49:ED:94:B1"
+      ]
     }
   }
 ]
